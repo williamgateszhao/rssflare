@@ -1,0 +1,78 @@
+name = "rssflare"
+main = "src/index.ts"
+compatibility_date = "2026-02-24"
+compatibility_flags = ["nodejs_compat"]
+
+[[routes]]
+pattern = "rssflare.<YOUR_CUSTOM_DOMAIN>"
+zone_name = "<YOUR_CUSTOM_DOMAIN>"
+custom_domain = true
+
+[observability]
+enabled = true
+
+# ==================== Runtime Configurations ====================
+[vars]
+# You can customize RSSFlare here. Changes here don't require rebuilding.
+# Uncomment the parameters you wish to override:
+
+# USER_AGENT = "Mozilla/5.0 (compatible; RSSFlare Custom Bot/1.0)"
+# FEED_CACHE_MAX_AGE = "600"
+# MASTER_BATCH_SIZE = "5"
+# MASTER_FETCH_TIMEOUT = "30 seconds"
+# MASTER_FETCH_RETRIES = "2"
+# MASTER_FETCH_RETRY_DELAY = "5 seconds"
+# MASTER_WAIT_CHILD_TIMEOUT = "30 minutes"
+# MASTER_SAVE_FEED_TIMEOUT = "30 seconds"
+# MASTER_SAVE_FEED_RETRIES = "1"
+# MASTER_SAVE_FEED_RETRY_DELAY = "5 seconds"
+# DETAIL_POLITE_DELAY = "1 second"
+# DETAIL_PROCESS_TIMEOUT = "30 seconds"
+# DETAIL_PROCESS_RETRIES = "2"
+# DETAIL_PROCESS_RETRY_DELAY = "10 seconds"
+# DETAIL_NOTIFY_RETRIES = "3"
+# DETAIL_NOTIFY_RETRY_DELAY = "5 seconds"
+# =================================================================
+
+# KV: Configuration storage
+[[kv_namespaces]]
+binding = "KV"
+id = "<YOUR_KV_ID>"
+
+# R2: RSS XML storage
+[[r2_buckets]]
+binding = "R2"
+bucket_name = "rssflare"
+
+# D1: Article cache, bypass Payload limit
+[[d1_databases]]
+binding = "D1"
+database_name = "rssflare"
+database_id = "<YOUR_D1_ID>"
+
+# Queue: Task buffering
+[[queues.producers]]
+queue = "rssflare1"
+binding = "QUEUE"
+
+[[queues.consumers]]
+queue = "rssflare1"
+max_batch_size = 3
+max_batch_timeout = 30
+dead_letter_queue = "rssflare2"
+
+# Workflow: Core crawler (Master)
+[[workflows]]
+name = "rssflare-master"
+binding = "MASTER_WORKFLOW"
+class_name = "MasterCrawlerWorkflow"
+
+# Workflow: Core crawler (Sub)
+[[workflows]]
+name = "rssflare-child"
+binding = "CHILD_WORKFLOW"
+class_name = "DetailCrawlerWorkflow"
+
+# Cron: Scheduled triggers
+[triggers]
+crons = ["6 */3 * * *"]
