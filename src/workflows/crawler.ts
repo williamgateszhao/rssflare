@@ -17,7 +17,7 @@ import { getParser } from "../utils/parsers";
 import { cleanHtml, truncateContent } from "../utils/html-cleaner";
 import { rewriteImagesInHtml } from "../utils/img-rewriter";
 
-// Helper function: Array chunking
+// Helper function: array slice
 function chunkArray<T>(array: T[], size: number): T[][] {
   const chunks = [];
   for (let i = 0; i < array.length; i += size) {
@@ -43,29 +43,61 @@ export class MasterCrawlerWorkflow extends WorkflowEntrypoint<
       img_rewrite,
     } = event.payload;
 
-    // ========== Step 1: Fetch list (Supports multiple URLs) ==========
+    // ========== Step 1: Process list page URLs ==========
     const workflowConfig = getWorkflowConfig(this.env);
     const appConfig = getAppConfig(this.env);
 
+    const targetUrls = await step.do(`rewrite-list-urls-${id}`, async () => {
+      const parser = getParser(parserName);
+      const sourceUrls = Array.isArray(url) ? url : [url];
+      const mergedConfig = {
+        ...(parser_config || {}),
+        userAgent: appConfig.USER_AGENT,
+      };
+
+      if (parser.rewriteListUrl) {
+        const results = [];
+        for (const u of sourceUrls) {
+          results.push(await parser.rewriteListUrl(u, mergedConfig));
+        }
+        return results;
+      }
+      return sourceUrls;
+    });
+
+    // ========== Step 2: Fetch list (supports multiple URLs) ==========
     const listResult = await step.do(
       `fetch-list-${id}`,
       workflowConfig.MASTER_CRAWLER.FETCH_LIST,
       async () => {
         const parser = getParser(parserName);
-        const urls = Array.isArray(url) ? url : [url];
+        const sourceUrls = Array.isArray(url) ? url : [url];
         const allItems: ListItem[] = [];
 
-        for (const u of urls) {
-          const res = await fetch(u, {
+        for (let i = 0; i < sourceUrls.length; i++) {
+          const originalUrl = sourceUrls[i];
+          const targetUrl = targetUrls[i];
+
+          const res = await fetch(targetUrl, {
             headers: {
               "User-Agent": appConfig.USER_AGENT,
-              Accept: "text/html",
+              Accept: "text/html, application/json, */*",
             },
           });
           if (!res.ok)
-            throw new Error(`Failed to fetch list: ${res.status} for ${u}`);
+            throw new Error(
+              `Failed to fetch list: ${res.status} for ${targetUrl}`
+            );
           const html = await res.text();
-          const { items } = await parser.parseList(html, u, parser_config);
+          const mergedConfig = {
+            ...(parser_config || {}),
+            userAgent: appConfig.USER_AGENT,
+          };
+          const { items } = await parser.parseList(
+            html,
+            originalUrl,
+            mergedConfig
+          );
           allItems.push(...items);
         }
 
@@ -80,7 +112,7 @@ export class MasterCrawlerWorkflow extends WorkflowEntrypoint<
         const allUrls = finalAllItems.map((item) => item.url);
 
         if (finalAllItems.length === 0) {
-          return { newItems: [], allItems: [], primaryUrl: urls[0] };
+          return { newItems: [], allItems: [], primaryUrl: sourceUrls[0] };
         }
 
         // Incremental comparison with D1: Find already fetched URLs
@@ -96,11 +128,11 @@ export class MasterCrawlerWorkflow extends WorkflowEntrypoint<
           (item) => !existingSet.has(item.url)
         );
 
-        return { newItems, allItems: finalAllItems, primaryUrl: urls[0] };
+        return { newItems, allItems: finalAllItems, primaryUrl: sourceUrls[0] };
       }
     );
 
-    // ========== Step 2: Dispatch sub-tasks ==========
+    // ========== Step 3: Dispatch child tasks ==========
     const batches = chunkArray(
       listResult.newItems,
       workflowConfig.MASTER_CRAWLER.BATCH_SIZE
@@ -124,7 +156,7 @@ export class MasterCrawlerWorkflow extends WorkflowEntrypoint<
         await this.env.CHILD_WORKFLOW.createBatch(instances);
       });
 
-      // ========== Step 3: Wait for sub-tasks to complete ==========
+      // ========== Step 4: Wait for child tasks to complete ==========
       for (let i = 0; i < totalBatches; i++) {
         await step.waitForEvent(`wait-child-${i}`, {
           timeout: workflowConfig.MASTER_CRAWLER.WAIT_CHILD
@@ -134,7 +166,7 @@ export class MasterCrawlerWorkflow extends WorkflowEntrypoint<
       }
     }
 
-    // ========== Step 4: Generate XML & Upload to R2 ==========
+    // ========== Step 5: Generate XML & Upload to R2 ==========
     await step.do(
       `save-feed-${id}`,
       workflowConfig.MASTER_CRAWLER.SAVE_FEED,
@@ -143,7 +175,7 @@ export class MasterCrawlerWorkflow extends WorkflowEntrypoint<
 
         const allUrls = listResult.allItems.map((item) => item.url);
 
-        // Read fragments from D1. Some detail pages might be missing if Sub Workflow fails, handling it gracefully.
+        // Read fragments from D1. Some detail pages might be missing due to child Workflow fetching errors, fallback gracefully
         const placeholders = allUrls.map(() => "?").join(",");
         const articles = await this.env.D1.prepare(
           `SELECT * FROM articles WHERE feed_id = ? AND url IN (${placeholders})`
@@ -246,7 +278,7 @@ export class MasterCrawlerWorkflow extends WorkflowEntrypoint<
   }
 }
 
-// === Sub Workflow (Detail Crawler) ===
+// === Detail Crawler Workflow ===
 export class DetailCrawlerWorkflow extends WorkflowEntrypoint<
   Env,
   ChildParams
@@ -287,10 +319,15 @@ export class DetailCrawlerWorkflow extends WorkflowEntrypoint<
               );
             const html = await res.text();
 
+            const mergedConfig = {
+              ...(parserConfig || {}),
+              userAgent: appConfig.USER_AGENT,
+            };
+
             const detail = await parser.parseDetail(
               html,
               articleItem,
-              parserConfig
+              mergedConfig
             );
 
             const mergedTitle = detail.title || articleItem.title;
@@ -305,6 +342,16 @@ export class DetailCrawlerWorkflow extends WorkflowEntrypoint<
             }
 
             const cleanedContent = truncateContent(cleanHtml(detail.content));
+
+            if (appConfig.DEBUG_SAVE_HTML) {
+              await this.env.D1.prepare(
+                `INSERT INTO debug_raw_html (feed_id, url, html) VALUES (?, ?, ?)
+                   ON CONFLICT (feed_id, url) DO UPDATE SET
+                   html = excluded.html, fetched_at = CURRENT_TIMESTAMP`
+              )
+                .bind(feedId, articleUrl, html)
+                .run();
+            }
 
             await this.env.D1.prepare(
               `
@@ -328,11 +375,17 @@ export class DetailCrawlerWorkflow extends WorkflowEntrypoint<
               )
               .run();
 
-            return true;
+            return {
+              success: true,
+              htmlLength: html.length,
+              contentLength: detail.content?.length || 0,
+              cleanedContentLength: cleanedContent?.length || 0,
+              authorParsed: mergedAuthor,
+            };
           }
         );
       } catch (err) {
-        // Swallow error after retries exhausted, wrap logging in a step to comply with rules against external side effects
+        // Swallow errors after retries are exhausted, and wrap the logging in a step to comply with no external side-effects rule
         await step.do(`handle-failed-item-${batchIndex}-${i}`, async () => {
           console.error(
             `Skipped item ${i} (${articleUrl}) after retries: ${err}`
@@ -342,7 +395,7 @@ export class DetailCrawlerWorkflow extends WorkflowEntrypoint<
       }
     }
 
-    // ========== Notify Completion ==========
+    // ========== Report Completion ==========
     await step.do(
       "notify-parent",
       workflowConfig.DETAIL_CRAWLER.NOTIFY_PARENT,

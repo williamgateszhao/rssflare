@@ -1,7 +1,7 @@
 /**
- * Default Parser - Generic RSS/Blog Site Parsing Rules
+ * Default Parser - Universal RSS/Blog site parsing rules
  *
- * Uses cheerio to extract article lists and detailed content.
+ * Uses cheerio to extract article list and detail content.
  * Suitable for most standard blog sites.
  */
 import * as cheerio from "cheerio";
@@ -14,8 +14,8 @@ import type {
 
 export const defaultParser: SiteParser = {
   /**
-   * Parse list page - Extract list of article links
-   * Default strategy: Find <a> tags inside <article> or common article containers
+   * Parse list page - extrace article link list
+   * Default strategy: find <a> tags inside <article> or common article containers
    */
   parseList(html: string, baseUrl: string, config?: any): ListParseResult {
     const $ = cheerio.load(html);
@@ -60,8 +60,8 @@ export const defaultParser: SiteParser = {
   },
 
   /**
-   * Parse detail page - Extract title, content body
-   * Default strategy: Find HTML content inside <article> or .post-content
+   * Parse detail page - extract title, body content
+   * Default strategy: find HTML content in <article> or .post-content
    */
   parseDetail(html: string, item: ListItem, config?: any): DetailParseResult {
     const $ = cheerio.load(html);
@@ -74,13 +74,13 @@ export const defaultParser: SiteParser = {
       $("h1").first().text().trim() ||
       $("title").text().trim();
 
-    // Extract content body
+    // Extract body content
     const contentEl =
       $("article .post-content, article .entry-content").first() ||
       $(".post-content, .entry-content, .article-content").first() ||
       $("article").first();
 
-    // Clean up: Remove scripts, styles, navs, and other irrelevant elements
+    // Cleanup: remove scripts, styles, navigation and other irrelevant elements
     contentEl
       .find("script, style, nav, .comments, .sidebar, .social-share")
       .remove();

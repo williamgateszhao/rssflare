@@ -3,7 +3,6 @@
   "version": "1.0.0",
   "description": "RSSFlare: A lightweight RSS aggregator built on Cloudflare Workers ecosystem with Workflows, Queues, R2, D1 and KV.",
   "author": "William Gates",
-  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/williamgateszhao/rssflare.git"

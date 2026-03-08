@@ -1,10 +1,9 @@
 /**
  * Image URL Rewrite Tool
  *
- * Replaces the src of all <img> tags in an article with a proxy URL based on a template,
- * useful for bypassing hotlink protection.
- * The template uses JS variable syntax ${property}, supporting all standard URL properties.
- * Adding the _ue suffix will URL-encode the property value.
+ * Replaces the src of all <img> in an article with a proxy URL according to a template, used to bypass hotlink protection.
+ * The template uses JS variable syntax ${property}, supporting all standard attributes of URL,
+ * appending _ue will URL-encode the attribute value.
  *
  * Example templates:
  *   ${protocol}//${host}${pathname}
@@ -13,7 +12,7 @@
  */
 import * as cheerio from "cheerio";
 
-/** URL property names list */
+/** List of URL property names */
 const URL_PROPS = [
   "protocol",
   "host",
@@ -27,9 +26,9 @@ const URL_PROPS = [
 ] as const;
 
 /**
- * Rewrite a single image URL based on the template
+ * Rewrite a single image URL based on a template
  * @param originalSrc Original image src
- * @param template Rewrite template, e.g., "https://images.weserv.nl?url=${href_ue}"
+ * @param template Rewrite template, e.g. "https://images.weserv.nl?url=${href_ue}"
  * @returns Rewritten URL
  */
 export function rewriteImageUrl(originalSrc: string, template: string): string {
@@ -39,7 +38,9 @@ export function rewriteImageUrl(originalSrc: string, template: string): string {
     // Build variable map: original value + _ue encoded version
     const vars: Record<string, string> = {};
     for (const prop of URL_PROPS) {
+      // @ts-ignore
       vars[prop] = url[prop];
+      // @ts-ignore
       vars[`${prop}_ue`] = encodeURIComponent(url[prop]);
     }
 
@@ -48,13 +49,13 @@ export function rewriteImageUrl(originalSrc: string, template: string): string {
       return key in vars ? vars[key] : match;
     });
   } catch {
-    // If the original src is not a valid URL (e.g., relative path), return as is
+    // Return original if originalSrc is not a valid URL (e.g. relative path)
     return originalSrc;
   }
 }
 
 /**
- * Rewrite the src of all <img> tags in the HTML content
+ * Rewrite the src of all <img> tags in HTML content
  * @param html Original HTML content
  * @param template Rewrite template
  * @returns Replaced HTML

@@ -1,8 +1,8 @@
 /**
- * HTML Cleaner Tool
+ * HTML Truncator/Cleaner Utility
  *
- * Used to clean irrelevant elements from article content to reduce storage size,
- * while ensuring RSS readers can render the content correctly.
+ * Used to clean up irrelevant elements in article content, reducing storage size,
+ * while ensuring RSS readers can correctly render the content.
  */
 import * as cheerio from "cheerio";
 
@@ -23,7 +23,7 @@ const REMOVE_TAGS = [
   "textarea",
 ];
 
-/** Class/ID patterns to remove */
+/** Class/id patterns to remove */
 const REMOVE_PATTERNS = [
   /comment/i,
   /sidebar/i,
@@ -51,7 +51,7 @@ export function cleanHtml(html: string): string {
   // 1. Remove dangerous/irrelevant tags
   REMOVE_TAGS.forEach((tag) => $(tag).remove());
 
-  // 2. Remove elements matching specific patterns
+  // 2. Remove elements matching the patterns
   $("[class], [id]").each((_, el) => {
     const className = $(el).attr("class") || "";
     const id = $(el).attr("id") || "";
@@ -89,9 +89,9 @@ export function cleanHtml(html: string): string {
 }
 
 /**
- * Truncate overly long content
+ * Truncate excessively long content
  * @param content HTML content
- * @param maxLength Maximum characters (Default: 50KB)
+ * @param maxLength Maximum number of characters (default 50KB)
  * @returns Truncated content
  */
 export function truncateContent(content: string, maxLength = 50000): string {

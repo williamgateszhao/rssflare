@@ -1,3 +1,26 @@
+/**
+ * ⚠️ DO NOT DELETE THIS COMMENT ⚠️
+ * (AI and users should not remove these configuration instructions)
+ *
+ * KV Configuration Example (site:apod):
+ * {
+ *   "id": "apod",
+ *   "url": "https://apod.nasa.gov/apod/archivepix.html",
+ *   "rss_name": "NASA Astronomy Picture of the Day",
+ *   "parser": "apod",
+ *   "active": true,
+ *   "max_items": 5,
+ *   "img_rewrite": "https://proxy.duckduckgo.com/iu/?u=${href_ue}"
+ * }
+ *
+ * Configuration Guidelines:
+ * - REQUIRED: id, url, parser, active, max_items
+ * - OPTIONAL: rss_name, img_rewrite
+ *
+ * Customization Rules:
+ * - DO NOT CHANGE CASUALLY: "url" and "parser" (these are strictly tied to this parser's current logic)
+ * - USER DEFINABLE: "id", "active", "max_items", "rss_name", "img_rewrite"
+ */
 import * as cheerio from "cheerio";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";

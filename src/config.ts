@@ -1,21 +1,21 @@
 /**
- * Type definitions - Site configuration and environment bindings
+ * Type Definitions - Site Configuration and Environment Bindings
  */
 import type {
   WorkflowStepConfig,
   WorkflowSleepDuration,
 } from "cloudflare:workers";
 
-/** Single site configuration (Stored in KV: site:{id}) */
+/** Single site config (Stored in KV: site:{id}) */
 export interface SiteConfig {
   id: string;
   url: string | string[];
-  parser: string; // Corresponding parser function name
-  active: boolean; // Active switch
-  max_items: number; // Max items to fetch each time
-  parser_config?: any; // Specific site parser configuration
+  parser: string; // Corresponds to the parsing strategy function name in the code
+  active: boolean; // Switch
+  max_items: number; // Only fetch the latest N articles each time
+  parser_config?: any; // Site-specific parsing configuration (array, object, etc.)
   rss_name?: string; // Manually set RSS name
-  img_rewrite?: string; // Image URL rewrite template, e.g., "https://images.weserv.nl?url=${href_ue}"
+  img_rewrite?: string; // Image URL rewrite template, e.g. "https://images.weserv.nl?url=${href_ue}"
 }
 
 /** Queue Message Payload */
@@ -29,7 +29,7 @@ export interface QueueMessage {
   img_rewrite?: string;
 }
 
-/** D1 Article record */
+/** D1 Article Record */
 export interface Article {
   feed_id: string;
   url: string;
@@ -40,7 +40,7 @@ export interface Article {
   fetched_at: string;
 }
 
-/** List page parse result */
+/** List Page Parse Result */
 export interface ListParseResult {
   items: ListItem[];
 }
@@ -52,7 +52,7 @@ export interface ListItem {
   pub_date?: string;
 }
 
-/** Detail page parse result */
+/** Detail Page Parse Result */
 export interface DetailParseResult {
   title: string;
   author?: string | string[];
@@ -60,8 +60,9 @@ export interface DetailParseResult {
   pub_date?: string;
 }
 
-/** Parser interface - Parsing rules for each site */
+/** Parser Interface - Parsing rules for each site */
 export interface SiteParser {
+  rewriteListUrl?(baseUrl: string, config?: any): string | Promise<string>;
   parseList(
     html: string,
     baseUrl: string,
@@ -83,7 +84,7 @@ export interface ChildParams {
   parserConfig?: any;
 }
 
-/** Cloudflare Worker environment bindings */
+/** Cloudflare Worker Environment Bindings */
 export interface Env {
   KV: KVNamespace;
   R2: R2Bucket;
@@ -96,6 +97,7 @@ export interface Env {
   // --- Environment Variables (wrangler.toml [vars]) ---
   USER_AGENT?: string;
   FEED_CACHE_MAX_AGE?: string; // e.g. "600"
+  DEBUG_SAVE_HTML?: string; // e.g. "true"
 
   MASTER_BATCH_SIZE?: string; // e.g. "5"
   MASTER_FETCH_TIMEOUT?: string; // e.g. "30 seconds"
@@ -125,6 +127,8 @@ export function getAppConfig(env: Env) {
     FEED_CACHE_MAX_AGE: env.FEED_CACHE_MAX_AGE
       ? parseInt(env.FEED_CACHE_MAX_AGE, 10)
       : 600,
+    DEBUG_SAVE_HTML:
+      env.DEBUG_SAVE_HTML === "true" || env.DEBUG_SAVE_HTML === "1",
   };
 }
 

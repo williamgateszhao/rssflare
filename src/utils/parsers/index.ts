@@ -3,21 +3,23 @@
  *
  * ⚠️ DO NOT MODIFY MANUALLY!
  * Add or remove parser files in the src/utils/parsers directory,
- * and this file will be updated automatically when running npm run dev or npm run deploy.
+ * and this file will be automatically updated when running npm run dev or npm run deploy.
  */
 import type { SiteParser } from "../../config";
 import { apodParser } from "./apod";
 import { defaultParser } from "./default";
+import { yahooNewsByProviderParser } from "./yahoo-news-by-provider";
 
 /** Parser mapping table */
 const parsers: Record<string, SiteParser> = {
   apod: apodParser,
   default: defaultParser,
+  "yahoo-news-by-provider": yahooNewsByProviderParser,
 };
 
 /**
- * Get parser by name
- * Fallback to default if the specified parser is not found
+ * Get a parser by name
+ * Fallback to default if no parser is found
  */
 export function getParser(name: string): SiteParser {
   return parsers[name] || parsers["default"];

@@ -3,11 +3,6 @@ main = "src/index.ts"
 compatibility_date = "2026-02-24"
 compatibility_flags = ["nodejs_compat"]
 
-[[routes]]
-pattern = "rssflare.<YOUR_CUSTOM_DOMAIN>"
-zone_name = "<YOUR_CUSTOM_DOMAIN>"
-custom_domain = true
-
 [observability]
 enabled = true
 
@@ -18,6 +13,7 @@ enabled = true
 
 # USER_AGENT = "Mozilla/5.0 (compatible; RSSFlare Custom Bot/1.0)"
 # FEED_CACHE_MAX_AGE = "600"
+# DEBUG_SAVE_HTML = "false"
 # MASTER_BATCH_SIZE = "5"
 # MASTER_FETCH_TIMEOUT = "30 seconds"
 # MASTER_FETCH_RETRIES = "2"
@@ -34,23 +30,23 @@ enabled = true
 # DETAIL_NOTIFY_RETRY_DELAY = "5 seconds"
 # =================================================================
 
-# KV: Configuration storage
+# KV: Store config
 [[kv_namespaces]]
 binding = "KV"
 id = "<YOUR_KV_ID>"
 
-# R2: RSS XML storage
+# R2: Store XML (Writes have high free tier limit)
 [[r2_buckets]]
 binding = "R2"
 bucket_name = "rssflare"
 
-# D1: Article cache, bypass Payload limit
+# D1: Core article cache, circumvents Payload limits
 [[d1_databases]]
 binding = "D1"
 database_name = "rssflare"
 database_id = "<YOUR_D1_ID>"
 
-# Queue: Task buffering
+# Queue: Task buffer
 [[queues.producers]]
 queue = "rssflare1"
 binding = "QUEUE"
@@ -61,13 +57,13 @@ max_batch_size = 3
 max_batch_timeout = 30
 dead_letter_queue = "rssflare2"
 
-# Workflow: Core crawler (Master)
+# Workflow: Core Crawler (Master)
 [[workflows]]
 name = "rssflare-master"
 binding = "MASTER_WORKFLOW"
 class_name = "MasterCrawlerWorkflow"
 
-# Workflow: Core crawler (Sub)
+# Workflow: Core Crawler (Child)
 [[workflows]]
 name = "rssflare-child"
 binding = "CHILD_WORKFLOW"
