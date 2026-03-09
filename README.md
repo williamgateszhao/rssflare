@@ -114,7 +114,7 @@ To add support for a new website, create a new TypeScript file in `src/utils/par
 ```bash
 npm run predev # This regenerates src/utils/parsers/index.ts
 ```
-*Note: Only an APOD parser is provided as an example. You can easily use AI to convert existing RSSHub routes into parsers for this project.*
+*Note: Several parsers are provided as examples, and more will be added slowly over time. You can easily use AI to convert existing RSSHub routes into parsers for this project.*
 
 ---
 
@@ -227,4 +227,4 @@ npx wrangler workflows trigger rssflare-master '{"id":"apod", "url":"https://apo
 ```bash
 npm run predev # 该脚本会自动重新生成 src/utils/parsers/index.ts 注册文件
 ```
-*注：本项目仅提供了一个 APOD 解析器作为样例。您可以非常方便地利用 AI 将现有的 RSSHub 路由代码转换为本项目的解析器。*
+*注：本项目提供了数个解析器作为样例，并且还会缓慢增加。您可以非常方便地利用 AI 将现有的 RSSHub 路由代码转换为本项目的解析器。*

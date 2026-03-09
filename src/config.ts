@@ -98,6 +98,7 @@ export interface Env {
   USER_AGENT?: string;
   FEED_CACHE_MAX_AGE?: string; // e.g. "600"
   DEBUG_SAVE_HTML?: string; // e.g. "true"
+  MAX_CONTENT_LENGTH?: string; // e.g. "300000"
 
   MASTER_BATCH_SIZE?: string; // e.g. "5"
   MASTER_FETCH_TIMEOUT?: string; // e.g. "30 seconds"
@@ -129,6 +130,9 @@ export function getAppConfig(env: Env) {
       : 600,
     DEBUG_SAVE_HTML:
       env.DEBUG_SAVE_HTML === "true" || env.DEBUG_SAVE_HTML === "1",
+    MAX_CONTENT_LENGTH: env.MAX_CONTENT_LENGTH
+      ? parseInt(env.MAX_CONTENT_LENGTH, 10)
+      : 300000,
   };
 }
 

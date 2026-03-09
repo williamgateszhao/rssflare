@@ -91,10 +91,10 @@ export function cleanHtml(html: string): string {
 /**
  * Truncate excessively long content
  * @param content HTML content
- * @param maxLength Maximum number of characters (default 50KB)
+ * @param maxLength Maximum number of characters (default 300KB)
  * @returns Truncated content
  */
-export function truncateContent(content: string, maxLength = 50000): string {
+export function truncateContent(content: string, maxLength = 300000): string {
   if (content.length <= maxLength) return content;
   return content.substring(0, maxLength) + "\n<!-- content truncated -->";
 }

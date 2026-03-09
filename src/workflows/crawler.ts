@@ -341,7 +341,10 @@ export class DetailCrawlerWorkflow extends WorkflowEntrypoint<
                 : String(mergedAuthorRaw).trim();
             }
 
-            const cleanedContent = truncateContent(cleanHtml(detail.content));
+            const cleanedContent = truncateContent(
+              cleanHtml(detail.content),
+              appConfig.MAX_CONTENT_LENGTH
+            );
 
             if (appConfig.DEBUG_SAVE_HTML) {
               await this.env.D1.prepare(

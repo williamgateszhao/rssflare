@@ -8,12 +8,14 @@
 import type { SiteParser } from "../../config";
 import { apodParser } from "./apod";
 import { defaultParser } from "./default";
+import { iplaysoftParser } from "./iplaysoft";
 import { yahooNewsByProviderParser } from "./yahoo-news-by-provider";
 
 /** Parser mapping table */
 const parsers: Record<string, SiteParser> = {
   apod: apodParser,
   default: defaultParser,
+  iplaysoft: iplaysoftParser,
   "yahoo-news-by-provider": yahooNewsByProviderParser,
 };
 

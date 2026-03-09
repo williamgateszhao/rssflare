@@ -139,48 +139,14 @@ export const yahooNewsByProviderParser: SiteParser = {
       }
     }
 
-    const body = $(".atoms");
-
-    // Remove unwanted elements
-    body.find('noscript, .text-gandalf, [id^="sda-inbody-"]').remove();
-
-    // Remove padding/style from containers
-    body.find(".caas-figure-with-pb, .caas-img-container").removeAttr("style");
-
-    // Fix images
-    body.find("img").each((_, ele) => {
-      const $ele = $(ele);
-      let dataSrc = $ele.attr("data-src");
-
-      if (dataSrc) {
-        const match = dataSrc.match(/.*--\/.*--\/(.*)/);
-        if (match?.[1]) {
-          dataSrc = match[1];
-        }
-        $ele.attr("src", dataSrc);
-        $ele.removeAttr("data-src");
-      }
-    });
-
-    // Fix youtube iframes
-    body.find(".caas-iframe").each((_, ele) => {
-      const $ele = $(ele);
-      if ($ele.attr("data-type") === "youtube") {
-        const blockquoteSrc = $ele.find("blockquote").attr("data-src");
-        if (blockquoteSrc) {
-          const id = blockquoteSrc.split("/").pop()?.split("?")?.[0];
-          if (id) {
-            $ele.replaceWith(
-              `<iframe src="https://www.youtube.com/embed/${id}" frameborder="0" allowfullscreen></iframe>`
-            );
-          }
-        }
-      }
+    let content = "";
+    $(".atoms").each((_, ele) => {
+      content += $(ele).html() || "";
     });
 
     return {
       title: item.title || ldJson.headline || $("title").text(),
-      content: body.html() || "",
+      content: content,
       author: ldAuthor || item.author,
       pub_date: ldJson.datePublished
         ? dayjs(ldJson.datePublished).toISOString()
