@@ -65,10 +65,8 @@ npx wrangler kv:key put --binding=KV "site_index" '["apod"]'
 
 # 2. Write the specific site configuration (e.g., NASA APOD)
 npx wrangler kv:key put --binding=KV "site:apod" '{
-  "id": "apod",
   "url": "https://apod.nasa.gov/apod/archivepix.html",
   "parser": "apod",
-  "active": true,
   "max_items": 5
 }'
 ```
@@ -87,10 +85,8 @@ Here are the supported fields for a feed configuration:
 
 ```json
 {
-  "id": "apod",
   "url": "https://apod.nasa.gov/apod/archivepix.html",
   "parser": "apod",
-  "active": true,
   "max_items": 5,
   "rss_name": "NASA APOD",
   "img_rewrite": "https://proxy.duckduckgo.com/iu/?u=${href_ue}"
@@ -99,11 +95,9 @@ Here are the supported fields for a feed configuration:
 
 | Field | Type | Description |
 | :--- | :--- | :--- |
-| `id` | String | **Required.** The unique identifier for the feed. This will be used in your RSS URL: `/rss/{id}`. |
 | `url` | String / Array | **Required.** The target website URL(s) to scrape. |
 | `parser` | String | **Required.** The name of the parser to use (matches the filename in `src/utils/parsers/`). |
-| `active` | Boolean | **Required.** Set to `false` to temporarily pause scraping for this site. |
-| `max_items` | Number | **Required.** The maximum number of new articles to fetch and process in a single run. |
+| `max_items` | Number | *Optional.* The maximum number of new articles to fetch and process in a single run. Defaults to `10`. |
 | `rss_name` | String | *Optional.* A custom title for the generated RSS feed. |
 | `img_rewrite`| String | *Optional.* A template string to proxy image URLs, bypassing hotlink protections. Use `${href_ue}` for the URL-encoded original image link. E.g., `https://proxy.duckduckgo.com/iu/?u=${href_ue}` or `https://images.weserv.nl?url=${href_ue}`. |
 | `parser_config`| Object | *Optional.* Any custom configuration parameters you want to pass specifically to your parser script. |
@@ -178,10 +172,8 @@ npx wrangler kv:key put --binding=KV "site_index" '["apod"]'
 
 # 2. 写入具体站点配置 (以 NASA APOD 为例)
 npx wrangler kv:key put --binding=KV "site:apod" '{
-  "id": "apod",
   "url": "https://apod.nasa.gov/apod/archivepix.html",
   "parser": "apod",
-  "active": true,
   "max_items": 5
 }'
 ```
@@ -200,10 +192,8 @@ npx wrangler workflows trigger rssflare-master '{"id":"apod", "url":"https://apo
 
 ```json
 {
-  "id": "apod",
   "url": "https://apod.nasa.gov/apod/archivepix.html",
   "parser": "apod",
-  "active": true,
   "max_items": 5,
   "rss_name": "NASA 每日一图",
   "img_rewrite": "https://proxy.duckduckgo.com/iu/?u=${href_ue}"
@@ -212,11 +202,9 @@ npx wrangler workflows trigger rssflare-master '{"id":"apod", "url":"https://apo
 
 | 字段 | 类型 | 说明 |
 | :--- | :--- | :--- |
-| `id` | String | **必填。** 站点的唯一标识符。最终订阅地址为 `/rss/{id}`。 |
 | `url` | String / Array | **必填。** 需要抓取的目标网站地址，支持数组形式传入多个 URL。 |
 | `parser` | String | **必填。** 采用的解析器名称（与 `src/utils/parsers/` 下的文件名对应）。 |
-| `active` | Boolean | **必填。** 设为 `false` 可暂停抓取该站点。 |
-| `max_items` | Number | **必填。** 每次运行最多抓取的新文章数量。 |
+| `max_items` | Number | *选填。* 每次运行最多抓取的新文章数量。默认为 `10`。 |
 | `rss_name` | String | *选填。* 为生成的 RSS 频道自定义标题。 |
 | `img_rewrite`| String | *选填。* 图片 URL 代理改写模板，用于破解防盗链。利用 `${href_ue}` 变量代表 URL 编码后的原图地址。例如可以使用 DuckDuckGo 的代理：`https://proxy.duckduckgo.com/iu/?u=${href_ue}`。 |
 | `parser_config`| Object | *选填。* 透传给解析器脚本的自定义参数对象。 |

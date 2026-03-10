@@ -94,16 +94,20 @@ export default {
       return;
     }
 
-    // Fetch all site configurations concurrently
+    // Fetch all site configurations concurrently and inject the id from the index
     const sites = await Promise.all(
-      indexRaw.map(
-        (id) => env.KV.get(`site:${id}`, "json") as Promise<SiteConfig | null>
-      )
+      indexRaw.map(async (id) => {
+        const config = await env.KV.get(`site:${id}`, "json") as Partial<SiteConfig> | null;
+        if (config) {
+          return { id, ...config } as SiteConfig;
+        }
+        return null;
+      })
     );
 
-    // Filter out inactive or invalid sites and map to Queue messages
+    // Filter out invalid sites and map to Queue messages
     const tasks = sites
-      .filter((s): s is SiteConfig => s !== null && s.active)
+      .filter((s): s is SiteConfig => s !== null)
       .map((s) => ({
         body: {
           id: s.id,
@@ -117,7 +121,7 @@ export default {
       }));
 
     if (tasks.length === 0) {
-      console.log("No active sites to process.");
+      console.log("No sites to process.");
       return;
     }
 

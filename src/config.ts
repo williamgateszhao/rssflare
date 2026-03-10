@@ -11,8 +11,7 @@ export interface SiteConfig {
   id: string;
   url: string | string[];
   parser: string; // Corresponds to the parsing strategy function name in the code
-  active: boolean; // Switch
-  max_items: number; // Only fetch the latest N articles each time
+  max_items?: number; // Only fetch the latest N articles each time, defaults to 10
   parser_config?: any; // Site-specific parsing configuration (array, object, etc.)
   rss_name?: string; // Manually set RSS name
   img_rewrite?: string; // Image URL rewrite template, e.g. "https://images.weserv.nl?url=${href_ue}"
@@ -23,7 +22,7 @@ export interface QueueMessage {
   id: string;
   url: string | string[];
   parser: string;
-  max_items: number;
+  max_items?: number;
   parser_config?: any;
   rss_name?: string;
   img_rewrite?: string;
@@ -121,6 +120,21 @@ export interface Env {
 }
 
 // ==================== Configuration Getters ====================
+
+/**
+ * Merge partial site config with defaults
+ */
+export function getSiteConfig(config: Partial<SiteConfig>, env?: Env): SiteConfig {
+  return {
+    id: config.id || "",
+    url: config.url || "",
+    parser: config.parser || "default",
+    max_items: config.max_items ?? 10,
+    parser_config: config.parser_config,
+    rss_name: config.rss_name,
+    img_rewrite: config.img_rewrite,
+  };
+}
 
 export function getAppConfig(env: Env) {
   return {

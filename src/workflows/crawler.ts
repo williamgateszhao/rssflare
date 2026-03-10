@@ -12,6 +12,7 @@ import {
   type ChildParams,
   getAppConfig,
   getWorkflowConfig,
+  getSiteConfig,
 } from "../config";
 import { getParser } from "../utils/parsers";
 import { cleanHtml, truncateContent } from "../utils/html-cleaner";
@@ -33,25 +34,17 @@ export class MasterCrawlerWorkflow extends WorkflowEntrypoint<
 > {
   async run(event: WorkflowEvent<QueueMessage>, step: WorkflowStep) {
     const parentId = event.instanceId;
-    const {
-      id,
-      url,
-      parser: parserName,
-      max_items,
-      parser_config,
-      rss_name,
-      img_rewrite,
-    } = event.payload;
+    const siteConfig = getSiteConfig(event.payload, this.env);
 
     // ========== Step 1: Process list page URLs ==========
     const workflowConfig = getWorkflowConfig(this.env);
     const appConfig = getAppConfig(this.env);
 
-    const targetUrls = await step.do(`rewrite-list-urls-${id}`, async () => {
-      const parser = getParser(parserName);
-      const sourceUrls = Array.isArray(url) ? url : [url];
+    const targetUrls = await step.do(`rewrite-list-urls-${siteConfig.id}`, async () => {
+      const parser = getParser(siteConfig.parser);
+      const sourceUrls = Array.isArray(siteConfig.url) ? siteConfig.url : [siteConfig.url];
       const mergedConfig = {
-        ...(parser_config || {}),
+        ...(siteConfig.parser_config || {}),
         userAgent: appConfig.USER_AGENT,
       };
 
@@ -67,11 +60,11 @@ export class MasterCrawlerWorkflow extends WorkflowEntrypoint<
 
     // ========== Step 2: Fetch list (supports multiple URLs) ==========
     const listResult = await step.do(
-      `fetch-list-${id}`,
+      `fetch-list-${siteConfig.id}`,
       workflowConfig.MASTER_CRAWLER.FETCH_LIST,
       async () => {
-        const parser = getParser(parserName);
-        const sourceUrls = Array.isArray(url) ? url : [url];
+        const parser = getParser(siteConfig.parser);
+        const sourceUrls = Array.isArray(siteConfig.url) ? siteConfig.url : [siteConfig.url];
         const allItems: ListItem[] = [];
 
         for (let i = 0; i < sourceUrls.length; i++) {
@@ -90,7 +83,7 @@ export class MasterCrawlerWorkflow extends WorkflowEntrypoint<
             );
           const html = await res.text();
           const mergedConfig = {
-            ...(parser_config || {}),
+            ...(siteConfig.parser_config || {}),
             userAgent: appConfig.USER_AGENT,
           };
           const { items } = await parser.parseList(
@@ -108,7 +101,7 @@ export class MasterCrawlerWorkflow extends WorkflowEntrypoint<
           seen.add(item.url);
           return true;
         });
-        const finalAllItems = uniqueItems.slice(0, max_items);
+        const finalAllItems = uniqueItems.slice(0, siteConfig.max_items);
         const allUrls = finalAllItems.map((item) => item.url);
 
         if (finalAllItems.length === 0) {
@@ -120,7 +113,7 @@ export class MasterCrawlerWorkflow extends WorkflowEntrypoint<
         const existing = await this.env.D1.prepare(
           `SELECT url FROM articles WHERE feed_id = ? AND url IN (${placeholders})`
         )
-          .bind(id, ...allUrls)
+          .bind(siteConfig.id, ...allUrls)
           .all<{ url: string }>();
 
         const existingSet = new Set(existing.results.map((r) => r.url));
@@ -144,12 +137,12 @@ export class MasterCrawlerWorkflow extends WorkflowEntrypoint<
         const instances = batches.map((batch, i) => ({
           id: `${parentId}-batch-${i}`,
           params: {
-            feedId: id,
+            feedId: siteConfig.id,
             batch,
             parentId,
             batchIndex: i,
-            parserName,
-            parserConfig: parser_config,
+            parserName: siteConfig.parser,
+            parserConfig: siteConfig.parser_config,
           } satisfies ChildParams,
         }));
 
@@ -168,7 +161,7 @@ export class MasterCrawlerWorkflow extends WorkflowEntrypoint<
 
     // ========== Step 5: Generate XML & Upload to R2 ==========
     await step.do(
-      `save-feed-${id}`,
+      `save-feed-${siteConfig.id}`,
       workflowConfig.MASTER_CRAWLER.SAVE_FEED,
       async () => {
         if (listResult.allItems.length === 0) return true;
@@ -180,7 +173,7 @@ export class MasterCrawlerWorkflow extends WorkflowEntrypoint<
         const articles = await this.env.D1.prepare(
           `SELECT * FROM articles WHERE feed_id = ? AND url IN (${placeholders})`
         )
-          .bind(id, ...allUrls)
+          .bind(siteConfig.id, ...allUrls)
           .all<{
             feed_id: string;
             url: string;
@@ -197,8 +190,8 @@ export class MasterCrawlerWorkflow extends WorkflowEntrypoint<
           .filter(Boolean) as typeof articles.results;
 
         const feed = new Feed({
-          title: rss_name || `${id}`,
-          description: rss_name || `${id} - Powered by RSSFlare`,
+          title: siteConfig.rss_name || `${siteConfig.id}`,
+          description: siteConfig.rss_name || `${siteConfig.id} - Powered by RSSFlare`,
           id: listResult.primaryUrl,
           link: listResult.primaryUrl,
           copyright: "",
@@ -208,8 +201,8 @@ export class MasterCrawlerWorkflow extends WorkflowEntrypoint<
 
         for (const article of orderedArticles) {
           let content = article.content || "";
-          if (img_rewrite && content) {
-            content = rewriteImagesInHtml(content, img_rewrite);
+          if (siteConfig.img_rewrite && content) {
+            content = rewriteImagesInHtml(content, siteConfig.img_rewrite);
           }
 
           let parsedAuthors: string[] = [];
@@ -233,11 +226,11 @@ export class MasterCrawlerWorkflow extends WorkflowEntrypoint<
             author:
               parsedAuthors.length > 0
                 ? [
-                    {
-                      name: "AUTHOR_HINT:" + parsedAuthors.join("|"),
-                      email: "dummy@rssflare.local",
-                    },
-                  ]
+                  {
+                    name: "AUTHOR_HINT:" + parsedAuthors.join("|"),
+                    email: "dummy@rssflare.local",
+                  },
+                ]
                 : undefined,
             content,
             date: article.pub_date
@@ -264,7 +257,7 @@ export class MasterCrawlerWorkflow extends WorkflowEntrypoint<
           }
         );
 
-        await this.env.R2.put(`feeds/${id}.xml`, xml, {
+        await this.env.R2.put(`feeds/${siteConfig.id}.xml`, xml, {
           httpMetadata: {
             contentType: "application/xml; charset=utf-8",
           },

@@ -4,21 +4,19 @@
  *
  * KV Configuration Example (site:yahoo-tech):
  * {
- *   "id": "yahoo-tech",
  *   "url": "https://tw.news.yahoo.com/yahoo_tech_tw_942--所有類別/archive",
  *   "parser": "yahoo-news-by-provider",
- *   "active": true,
  *   "max_items": 20,
  *   "img_rewrite": "https://proxy.duckduckgo.com/iu/?u=${href_ue}"
  * }
  *
  * Configuration Guidelines:
- * - REQUIRED: id, url, parser, active, max_items
- * - OPTIONAL: img_rewrite
+ * - REQUIRED: url, parser
+ * - OPTIONAL: max_items, img_rewrite
  *
  * Customization Rules:
  * - DO NOT CHANGE CASUALLY: "parser" (must strictly be "yahoo-news-by-provider")
- * - USER DEFINABLE: "id", "url", "active", "max_items", "img_rewrite"
+ * - USER DEFINABLE: "url", "max_items", "img_rewrite"
  *
  * Specific Notes for yahoo-news-by-provider:
  * - url: The domain must be either `tw.news.yahoo.com` or `hk.news.yahoo.com`.

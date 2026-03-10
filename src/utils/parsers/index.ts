@@ -10,6 +10,7 @@ import { apodParser } from "./apod";
 import { defaultParser } from "./default";
 import { iplaysoftParser } from "./iplaysoft";
 import { yahooNewsByProviderParser } from "./yahoo-news-by-provider";
+import { sspaiParser } from "./sspai";
 
 /** Parser mapping table */
 const parsers: Record<string, SiteParser> = {
@@ -17,6 +18,7 @@ const parsers: Record<string, SiteParser> = {
   default: defaultParser,
   iplaysoft: iplaysoftParser,
   "yahoo-news-by-provider": yahooNewsByProviderParser,
+  sspai: sspaiParser,
 };
 
 /**

@@ -4,21 +4,19 @@
  *
  * KV Configuration Example (site:iplaysoft):
  * {
- *   "id": "iplaysoft",
  *   "url": "https://feed.iplaysoft.com",
  *   "rss_name": "异次元软件世界",
  *   "parser": "iplaysoft",
- *   "active": true,
  *   "max_items": 10
  * }
  *
  * Configuration Guidelines:
- * - REQUIRED: id, url, parser, active, max_items
- * - OPTIONAL: rss_name, img_rewrite
+ * - REQUIRED: url, parser
+ * - OPTIONAL: max_items, rss_name
  *
  * Customization Rules:
  * - DO NOT CHANGE CASUALLY: "url" and "parser" (these are strictly tied to this parser's current logic)
- * - USER DEFINABLE: "id", "active", "max_items", "rss_name", "img_rewrite"
+ * - USER DEFINABLE: "max_items", "rss_name"
  */
 import * as cheerio from "cheerio";
 import dayjs from "dayjs";
