@@ -40,23 +40,27 @@ export class MasterCrawlerWorkflow extends WorkflowEntrypoint<
     const workflowConfig = getWorkflowConfig(this.env);
     const appConfig = getAppConfig(this.env);
 
-    const targetUrls = await step.do(`rewrite-list-urls-${siteConfig.id}`, async () => {
-      const parser = getParser(siteConfig.parser);
-      const sourceUrls = Array.isArray(siteConfig.url) ? siteConfig.url : [siteConfig.url];
-      const mergedConfig = {
-        ...(siteConfig.parser_config || {}),
-        userAgent: appConfig.USER_AGENT,
-      };
-
-      if (parser.rewriteListUrl) {
-        const results = [];
-        for (const u of sourceUrls) {
-          results.push(await parser.rewriteListUrl(u, mergedConfig));
+    const targetUrls = await step.do(
+      `rewrite-list-urls-${siteConfig.id}`,
+      async () => {
+        const parser = getParser(siteConfig.parser);
+        const sourceUrls = Array.isArray(siteConfig.url)
+          ? siteConfig.url
+          : [siteConfig.url];
+        const mergedConfig = {
+          ...siteConfig,
+          userAgent: appConfig.USER_AGENT,
+        };
+        if (parser.rewriteListUrl) {
+          const results = [];
+          for (const u of sourceUrls) {
+            results.push(await parser.rewriteListUrl(u, mergedConfig));
+          }
+          return results;
         }
-        return results;
+        return sourceUrls;
       }
-      return sourceUrls;
-    });
+    );
 
     // ========== Step 2: Fetch list (supports multiple URLs) ==========
     const listResult = await step.do(
@@ -64,7 +68,9 @@ export class MasterCrawlerWorkflow extends WorkflowEntrypoint<
       workflowConfig.MASTER_CRAWLER.FETCH_LIST,
       async () => {
         const parser = getParser(siteConfig.parser);
-        const sourceUrls = Array.isArray(siteConfig.url) ? siteConfig.url : [siteConfig.url];
+        const sourceUrls = Array.isArray(siteConfig.url)
+          ? siteConfig.url
+          : [siteConfig.url];
         const allItems: ListItem[] = [];
 
         for (let i = 0; i < sourceUrls.length; i++) {
@@ -83,7 +89,7 @@ export class MasterCrawlerWorkflow extends WorkflowEntrypoint<
             );
           const html = await res.text();
           const mergedConfig = {
-            ...(siteConfig.parser_config || {}),
+            ...siteConfig,
             userAgent: appConfig.USER_AGENT,
           };
           const { items } = await parser.parseList(
@@ -141,8 +147,7 @@ export class MasterCrawlerWorkflow extends WorkflowEntrypoint<
             batch,
             parentId,
             batchIndex: i,
-            parserName: siteConfig.parser,
-            parserConfig: siteConfig.parser_config,
+            siteConfig,
           } satisfies ChildParams,
         }));
 
@@ -191,7 +196,8 @@ export class MasterCrawlerWorkflow extends WorkflowEntrypoint<
 
         const feed = new Feed({
           title: siteConfig.rss_name || `${siteConfig.id}`,
-          description: siteConfig.rss_name || `${siteConfig.id} - Powered by RSSFlare`,
+          description:
+            siteConfig.rss_name || `${siteConfig.id} - Powered by RSSFlare`,
           id: listResult.primaryUrl,
           link: listResult.primaryUrl,
           copyright: "",
@@ -226,11 +232,11 @@ export class MasterCrawlerWorkflow extends WorkflowEntrypoint<
             author:
               parsedAuthors.length > 0
                 ? [
-                  {
-                    name: "AUTHOR_HINT:" + parsedAuthors.join("|"),
-                    email: "dummy@rssflare.local",
-                  },
-                ]
+                    {
+                      name: "AUTHOR_HINT:" + parsedAuthors.join("|"),
+                      email: "dummy@rssflare.local",
+                    },
+                  ]
                 : undefined,
             content,
             date: article.pub_date
@@ -277,8 +283,7 @@ export class DetailCrawlerWorkflow extends WorkflowEntrypoint<
   ChildParams
 > {
   async run(event: WorkflowEvent<ChildParams>, step: WorkflowStep) {
-    const { feedId, batch, parentId, batchIndex, parserName, parserConfig } =
-      event.payload;
+    const { feedId, batch, parentId, batchIndex, siteConfig } = event.payload;
 
     const workflowConfig = getWorkflowConfig(this.env);
     const appConfig = getAppConfig(this.env);
@@ -299,7 +304,7 @@ export class DetailCrawlerWorkflow extends WorkflowEntrypoint<
           `process-item-${batchIndex}-${i}`,
           workflowConfig.DETAIL_CRAWLER.PROCESS_ITEM,
           async () => {
-            const parser = getParser(parserName);
+            const parser = getParser(siteConfig.parser);
             const res = await fetch(articleUrl, {
               headers: {
                 "User-Agent": appConfig.USER_AGENT,
@@ -313,10 +318,9 @@ export class DetailCrawlerWorkflow extends WorkflowEntrypoint<
             const html = await res.text();
 
             const mergedConfig = {
-              ...(parserConfig || {}),
+              ...siteConfig,
               userAgent: appConfig.USER_AGENT,
             };
-
             const detail = await parser.parseDetail(
               html,
               articleItem,
@@ -326,6 +330,7 @@ export class DetailCrawlerWorkflow extends WorkflowEntrypoint<
             const mergedTitle = detail.title || articleItem.title;
             const mergedAuthorRaw = detail.author || articleItem.author;
             const mergedPubDate = detail.pub_date || articleItem.pub_date;
+            const mergedUrl = detail.url || articleUrl;
 
             let mergedAuthor: string | null = null;
             if (mergedAuthorRaw) {
@@ -345,7 +350,7 @@ export class DetailCrawlerWorkflow extends WorkflowEntrypoint<
                    ON CONFLICT (feed_id, url) DO UPDATE SET
                    html = excluded.html, fetched_at = CURRENT_TIMESTAMP`
               )
-                .bind(feedId, articleUrl, html)
+                .bind(feedId, mergedUrl, html)
                 .run();
             }
 
@@ -363,7 +368,7 @@ export class DetailCrawlerWorkflow extends WorkflowEntrypoint<
             )
               .bind(
                 feedId,
-                articleUrl,
+                mergedUrl,
                 mergedTitle || null,
                 mergedAuthor || null,
                 cleanedContent,

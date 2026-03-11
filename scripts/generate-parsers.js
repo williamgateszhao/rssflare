@@ -20,13 +20,19 @@ function generate() {
 
     for (const file of parserFiles) {
         const name = file.replace('.ts', '');
-        // Convert to camelCase and add Parser suffix
-        // Example: apod.ts -> apodParser, my-site.ts -> mySiteParser
-        const camelName = name.replace(/-([a-z])/g, g => g[1].toUpperCase());
-        const exportName = `${camelName}Parser`;
+        const filePath = path.join(parsersDir, file);
+        const content = fs.readFileSync(filePath, 'utf-8');
 
-        imports += `import { ${exportName} } from './${name}';\n`;
-        parsersObj += `    '${name}': ${exportName},\n`;
+        // Match export const <something>Parser
+        const regex = /export\s+const\s+([a-zA-Z0-9_]+)Parser\s*(:|=)/g;
+        let match;
+        while ((match = regex.exec(content)) !== null) {
+            const camelName = match[1];
+            const exportName = `${camelName}Parser`;
+
+            imports += `import { ${exportName} } from './${name}';\n`;
+            parsersObj += `    '${camelName}': ${exportName},\n`;
+        }
     }
 
     parsersObj += `};\n`;

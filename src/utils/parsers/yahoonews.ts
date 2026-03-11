@@ -5,7 +5,7 @@
  * KV Configuration Example (site:yahoo-tech):
  * {
  *   "url": "https://tw.news.yahoo.com/yahoo_tech_tw_942--所有類別/archive",
- *   "parser": "yahoo-news-by-provider",
+ *   "parser": "yahooNewsByProvider",
  *   "max_items": 20,
  *   "img_rewrite": "https://proxy.duckduckgo.com/iu/?u=${href_ue}"
  * }
@@ -15,10 +15,10 @@
  * - OPTIONAL: max_items, img_rewrite
  *
  * Customization Rules:
- * - DO NOT CHANGE CASUALLY: "parser" (must strictly be "yahoo-news-by-provider")
+ * - DO NOT CHANGE CASUALLY: "parser" (must strictly be "yahooNewsByProvider")
  * - USER DEFINABLE: "url", "max_items", "img_rewrite"
  *
- * Specific Notes for yahoo-news-by-provider:
+ * Specific Notes for yahooNewsByProvider:
  * - url: The domain must be either `tw.news.yahoo.com` or `hk.news.yahoo.com`.
  *        The segment `yahoo_tech_tw_942` corresponds to the provider's name (source).
  *        You can get the full URL directly by navigating to the news source on the Yahoo News website and copying the link.
@@ -34,7 +34,7 @@ import type {
 
 export const yahooNewsByProviderParser: SiteParser = {
   rewriteListUrl(baseUrl: string, config?: any): string {
-    const limit = config?.limit || 20;
+    const limit = config?.max_items || 10;
 
     const hostname = new URL(baseUrl).hostname;
 

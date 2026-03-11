@@ -97,7 +97,10 @@ export default {
     // Fetch all site configurations concurrently and inject the id from the index
     const sites = await Promise.all(
       indexRaw.map(async (id) => {
-        const config = await env.KV.get(`site:${id}`, "json") as Partial<SiteConfig> | null;
+        const config = (await env.KV.get(
+          `site:${id}`,
+          "json"
+        )) as Partial<SiteConfig> | null;
         if (config) {
           return { id, ...config } as SiteConfig;
         }

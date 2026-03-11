@@ -57,6 +57,7 @@ export interface DetailParseResult {
   author?: string | string[];
   content: string;
   pub_date?: string;
+  url?: string;
 }
 
 /** Parser Interface - Parsing rules for each site */
@@ -79,8 +80,7 @@ export interface ChildParams {
   batch: ListItem[];
   parentId: string;
   batchIndex: number;
-  parserName: string;
-  parserConfig?: any;
+  siteConfig: SiteConfig;
 }
 
 /** Cloudflare Worker Environment Bindings */
@@ -124,7 +124,10 @@ export interface Env {
 /**
  * Merge partial site config with defaults
  */
-export function getSiteConfig(config: Partial<SiteConfig>, env?: Env): SiteConfig {
+export function getSiteConfig(
+  config: Partial<SiteConfig>,
+  env?: Env
+): SiteConfig {
   return {
     id: config.id || "",
     url: config.url || "",
