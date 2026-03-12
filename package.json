@@ -9,8 +9,11 @@
     "url": "git+https://github.com/williamgateszhao/rssflare.git"
   },
   "scripts": {
+    "format": "prettier --write .",
+    "check-format": "prettier --check .",
+    "prepare-github": "bash scripts/prepare-github-release.sh",
     "predev": "node scripts/generate-parsers.js",
-    "predeploy": "node scripts/generate-parsers.js",
+    "predeploy": "npm run format && node scripts/generate-parsers.js",
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
     "db:init": "wrangler d1 execute D1_DB --local --file=./schema.sql",
@@ -24,6 +27,7 @@
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20240620.0",
+    "prettier": "^3.5.2",
     "typescript": "^5.5.0",
     "wrangler": "^4.70.0"
   }

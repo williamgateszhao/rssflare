@@ -52,16 +52,50 @@ export const apodParser: SiteParser = {
     return { items };
   },
 
-  parseDetail(html: string, item: ListItem, config?: any): DetailParseResult {
+  async parseDetail(
+    html: string,
+    item: ListItem,
+    config?: any
+  ): Promise<DetailParseResult> {
+    // Some APOD pages (e.g. ap260312.html) are saved as UTF-16LE, but the server
+    // sends Content-Type: text/html; charset=UTF-8. This causes the initial fetch's
+    // .text() to return garbled strings with null bytes. We detect this and refetch.
+    if (!html.includes("<center>") || html.includes("\u0000")) {
+      try {
+        const res = await fetch(item.url, {
+          headers: {
+            "User-Agent": config?.userAgent || "Mozilla/5.0",
+          },
+        });
+        const buffer = await res.arrayBuffer();
+        const decoder = new TextDecoder("utf-16le");
+        html = decoder.decode(buffer);
+      } catch (e) {
+        // Fallback to original html if refetching fails
+      }
+    }
+
     const content = cheerio.load(html);
 
     let description = "";
 
     // Extract Image
-    const imgSrc = content("img").attr("src");
-    if (imgSrc) {
-      const absImgSrc = new URL(imgSrc, item.url).toString();
-      description += `<img src="${absImgSrc}"> <br>`;
+    const mediaP = content("body > center").first().find("p").last();
+
+    mediaP.find("img, iframe, a").each((_, el) => {
+      const src = content(el).attr("src");
+      if (src) {
+        content(el).attr("src", new URL(src, item.url).toString());
+      }
+      const href = content(el).attr("href");
+      if (href) {
+        content(el).attr("href", new URL(href, item.url).toString());
+      }
+    });
+
+    const mediaHtml = mediaP.html();
+    if (mediaHtml) {
+      description += `${mediaHtml} <br>`;
     }
 
     // Extract center content and first paragraph
