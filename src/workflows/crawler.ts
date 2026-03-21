@@ -186,6 +186,7 @@ export class MasterCrawlerWorkflow extends WorkflowEntrypoint<
             author: string | null;
             content: string | null;
             pub_date: string | null;
+            link: string | null;
             fetched_at: string;
           }>();
 
@@ -225,10 +226,12 @@ export class MasterCrawlerWorkflow extends WorkflowEntrypoint<
             }
           }
 
+          const displayUrl = article.link || article.url;
+
           feed.addItem({
             title: article.title || "Untitled",
-            id: article.url,
-            link: article.url,
+            id: displayUrl,
+            link: displayUrl,
             author:
               parsedAuthors.length > 0
                 ? [
@@ -330,7 +333,10 @@ export class DetailCrawlerWorkflow extends WorkflowEntrypoint<
             const mergedTitle = detail.title || articleItem.title;
             const mergedAuthorRaw = detail.author || articleItem.author;
             const mergedPubDate = detail.pub_date || articleItem.pub_date;
-            const mergedUrl = detail.url || articleUrl;
+            // detail.url is the canonical/display URL (e.g. https://sspai.com/post/12345)
+            // articleUrl is the original fetch URL (e.g. API endpoint) used as the D1 key
+            const canonicalLink =
+              detail.url && detail.url !== articleUrl ? detail.url : null;
 
             let mergedAuthor: string | null = null;
             if (mergedAuthorRaw) {
@@ -350,29 +356,31 @@ export class DetailCrawlerWorkflow extends WorkflowEntrypoint<
                    ON CONFLICT (feed_id, url) DO UPDATE SET
                    html = excluded.html, fetched_at = CURRENT_TIMESTAMP`
               )
-                .bind(feedId, mergedUrl, html)
+                .bind(feedId, articleUrl, html)
                 .run();
             }
 
             await this.env.D1.prepare(
               `
-                  INSERT INTO articles (feed_id, url, title, author, content, pub_date)
-                  VALUES (?, ?, ?, ?, ?, ?)
+                  INSERT INTO articles (feed_id, url, title, author, content, pub_date, link)
+                  VALUES (?, ?, ?, ?, ?, ?, ?)
                   ON CONFLICT (feed_id, url) DO UPDATE SET
                     title = excluded.title,
                     author = excluded.author,
                     content = excluded.content,
                     pub_date = excluded.pub_date,
+                    link = excluded.link,
                     fetched_at = CURRENT_TIMESTAMP
               `
             )
               .bind(
                 feedId,
-                mergedUrl,
+                articleUrl,
                 mergedTitle || null,
                 mergedAuthor || null,
                 cleanedContent,
-                mergedPubDate || null
+                mergedPubDate || null,
+                canonicalLink
               )
               .run();
 
@@ -382,6 +390,7 @@ export class DetailCrawlerWorkflow extends WorkflowEntrypoint<
               contentLength: detail.content?.length || 0,
               cleanedContentLength: cleanedContent?.length || 0,
               authorParsed: mergedAuthor,
+              canonicalLink,
             };
           }
         );

@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS articles (
     author TEXT,
     content TEXT,
     pub_date TEXT,
+    link TEXT,
     fetched_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (feed_id, url)
 );

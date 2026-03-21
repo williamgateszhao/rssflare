@@ -36,6 +36,7 @@ export interface Article {
   author: string | null; // Stored as JSON stringified array or plain string in DB
   content: string | null;
   pub_date: string | null;
+  link: string | null; // Canonical display URL (when different from the fetch URL stored in `url`)
   fetched_at: string;
 }
 
