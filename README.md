@@ -100,18 +100,20 @@ Here are the supported fields for a feed configuration:
   "parser": "apod",
   "max_items": 5,
   "rss_name": "NASA APOD",
-  "img_rewrite": "https://proxy.duckduckgo.com/iu/?u=${href_ue}"
+  "img_rewrite": "https://proxy.duckduckgo.com/iu/?u=${href_ue}",
+  "sort_by_list_order": false
 }
 ```
 
-| Field           | Type           | Description                                                                                                                                                                                                                                     |
-| :-------------- | :------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `url`           | String / Array | **Required.** The target website URL(s) to scrape. Supports an array to pass multiple URLs.                                                                                                                                                     |
-| `parser`        | String         | **Required.** The name of the parser to use (matches the filename in `src/utils/parsers/`).                                                                                                                                                     |
-| `max_items`     | Number         | _Optional._ The maximum number of new articles to fetch and process in a single run. Defaults to `10`.                                                                                                                                          |
-| `rss_name`      | String         | _Optional._ A custom title for the generated RSS feed.                                                                                                                                                                                          |
-| `img_rewrite`   | String         | _Optional._ A template string to proxy image URLs, bypassing hotlink protections. Use `${href_ue}` for the URL-encoded original image link. E.g., `https://proxy.duckduckgo.com/iu/?u=${href_ue}` or `https://images.weserv.nl?url=${href_ue}`. |
-| `parser_config` | Object         | _Optional._ Any custom configuration parameters you want to pass specifically to your parser script.                                                                                                                                            |
+| Field                | Type           | Description                                                                                                                                                                                                                                     |
+| :------------------- | :------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `url`                | String / Array | **Required.** The target website URL(s) to scrape. Supports an array to pass multiple URLs.                                                                                                                                                     |
+| `parser`             | String         | **Required.** The name of the parser to use (matches the filename in `src/utils/parsers/`).                                                                                                                                                     |
+| `max_items`          | Number         | _Optional._ The maximum number of new articles to fetch and process in a single run. Defaults to `10`.                                                                                                                                          |
+| `rss_name`           | String         | _Optional._ A custom title for the generated RSS feed.                                                                                                                                                                                          |
+| `img_rewrite`        | String         | _Optional._ A template string to proxy image URLs, bypassing hotlink protections. Use `${href_ue}` for the URL-encoded original image link. E.g., `https://proxy.duckduckgo.com/iu/?u=${href_ue}` or `https://images.weserv.nl?url=${href_ue}`. |
+| `parser_config`      | Object         | _Optional._ Any custom configuration parameters you want to pass specifically to your parser script.                                                                                                                                            |
+| `sort_by_list_order` | Boolean        | _Optional._ If `true`, strictly keeps the original list order during RSS generation. Defaults to `false`, which sorts items by their published date (falling back to fetched date if `pubDate` is missing).                                     |
 
 ### 🛠 Developing Custom Parsers
 
@@ -219,18 +221,20 @@ npx wrangler workflows trigger rssflare-master '{"id":"apod", "url":"https://apo
   "parser": "apod",
   "max_items": 5,
   "rss_name": "NASA 每日一图",
-  "img_rewrite": "https://proxy.duckduckgo.com/iu/?u=${href_ue}"
+  "img_rewrite": "https://proxy.duckduckgo.com/iu/?u=${href_ue}",
+  "sort_by_list_order": false
 }
 ```
 
-| 字段            | 类型           | 说明                                                                                                                                                                                                                            |
-| :-------------- | :------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `url`           | String / Array | **必填。** 需要抓取的目标网站地址，支持数组形式传入多个 URL。                                                                                                                                                                   |
-| `parser`        | String         | **必填。** 采用的解析器名称（与 `src/utils/parsers/` 下的文件名对应）。                                                                                                                                                         |
-| `max_items`     | Number         | _选填。_ 每次运行最多抓取的新文章数量。默认为 `10`。                                                                                                                                                                            |
-| `rss_name`      | String         | _选填。_ 为生成的 RSS 频道自定义标题。                                                                                                                                                                                          |
-| `img_rewrite`   | String         | _选填。_ 图片 URL 代理改写模板，用于破解防盗链。利用 `${href_ue}` 变量代表 URL 编码后的原图地址。例如可以使用 DuckDuckGo 的代理：`https://proxy.duckduckgo.com/iu/?u=${href_ue}` 或 `https://images.weserv.nl?url=${href_ue}`。 |
-| `parser_config` | Object         | _选填。_ 透传给解析器脚本的自定义参数对象。                                                                                                                                                                                     |
+| 字段                 | 类型           | 说明                                                                                                                                                                                                                            |
+| :------------------- | :------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `url`                | String / Array | **必填。** 需要抓取的目标网站地址，支持数组形式传入多个 URL。                                                                                                                                                                   |
+| `parser`             | String         | **必填。** 采用的解析器名称（与 `src/utils/parsers/` 下的文件名对应）。                                                                                                                                                         |
+| `max_items`          | Number         | _选填。_ 每次运行最多抓取的新文章数量。默认为 `10`。                                                                                                                                                                            |
+| `rss_name`           | String         | _选填。_ 为生成的 RSS 频道自定义标题。                                                                                                                                                                                          |
+| `img_rewrite`        | String         | _选填。_ 图片 URL 代理改写模板，用于破解防盗链。利用 `${href_ue}` 变量代表 URL 编码后的原图地址。例如可以使用 DuckDuckGo 的代理：`https://proxy.duckduckgo.com/iu/?u=${href_ue}` 或 `https://images.weserv.nl?url=${href_ue}`。 |
+| `parser_config`      | Object         | _选填。_ 透传给解析器脚本的自定义参数对象。                                                                                                                                                                                     |
+| `sort_by_list_order` | Boolean        | _选填。_ 是否强制按照原始列表页的顺序输出 RSS。默认为 `false`，即按发布时间排序推断（若缺少发布时间，则退化为按抓取时间排序）。                                                                                                 |
 
 ### 🛠 自定义解析器开发
 

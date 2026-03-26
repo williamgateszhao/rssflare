@@ -14,8 +14,6 @@ const REMOVE_TAGS = [
   "noscript",
   "svg",
   "canvas",
-  "video",
-  "audio",
   "form",
   "input",
   "button",

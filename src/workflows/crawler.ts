@@ -191,9 +191,38 @@ export class MasterCrawlerWorkflow extends WorkflowEntrypoint<
           }>();
 
         const articleMap = new Map(articles.results.map((a) => [a.url, a]));
-        const orderedArticles = allUrls
-          .map((u) => articleMap.get(u))
-          .filter(Boolean) as typeof articles.results;
+        const articlesList = allUrls
+          .map((u, index) => ({ article: articleMap.get(u), index }))
+          .filter((item) => item.article !== undefined) as {
+          article: (typeof articles.results)[0];
+          index: number;
+        }[];
+
+        if (!siteConfig.sort_by_list_order) {
+          articlesList.sort((a, b) => {
+            const getSortDate = (article: (typeof articles.results)[0]) => {
+              const d = article.pub_date
+                ? dayjs(article.pub_date).valueOf()
+                : dayjs(article.fetched_at).valueOf();
+              return Number.isNaN(d) ? dayjs(article.fetched_at).valueOf() : d;
+            };
+
+            const dateA = getSortDate(a.article);
+            const dateB = getSortDate(b.article);
+
+            // Ignore differences smaller than 1 minute (60000ms).
+            // This ensures that items falling back to fetched_at in the same batch
+            // (where timestamps vary by milliseconds) preserve their original list order.
+            if (Math.abs(dateB - dateA) > 60000) {
+              return dateB - dateA; // latest first
+            }
+            return a.index - b.index; // fallback to original list order
+          });
+        }
+
+        const orderedArticles = articlesList.map(
+          (item) => item.article
+        ) as typeof articles.results;
 
         const feed = new Feed({
           title: siteConfig.rss_name || `${siteConfig.id}`,
@@ -232,6 +261,8 @@ export class MasterCrawlerWorkflow extends WorkflowEntrypoint<
             title: article.title || "Untitled",
             id: displayUrl,
             link: displayUrl,
+            description: content,
+            content: content,
             author:
               parsedAuthors.length > 0
                 ? [
@@ -241,7 +272,6 @@ export class MasterCrawlerWorkflow extends WorkflowEntrypoint<
                     },
                   ]
                 : undefined,
-            content,
             date: article.pub_date
               ? dayjs(article.pub_date).toDate()
               : dayjs(article.fetched_at).toDate(),

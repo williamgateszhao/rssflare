@@ -15,6 +15,7 @@ export interface SiteConfig {
   parser_config?: any; // Site-specific parsing configuration (array, object, etc.)
   rss_name?: string; // Manually set RSS name
   img_rewrite?: string; // Image URL rewrite template, e.g. "https://images.weserv.nl?url=${href_ue}"
+  sort_by_list_order?: boolean; // If true, strictly keep the original list order. Default false: sort by pubDate.
 }
 
 /** Queue Message Payload */
@@ -26,6 +27,7 @@ export interface QueueMessage {
   parser_config?: any;
   rss_name?: string;
   img_rewrite?: string;
+  sort_by_list_order?: boolean;
 }
 
 /** D1 Article Record */
@@ -137,6 +139,7 @@ export function getSiteConfig(
     parser_config: config.parser_config,
     rss_name: config.rss_name,
     img_rewrite: config.img_rewrite,
+    sort_by_list_order: config.sort_by_list_order,
   };
 }
 
