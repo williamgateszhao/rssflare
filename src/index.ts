@@ -12,7 +12,7 @@ import {
   DetailCrawlerWorkflow,
 } from "./workflows/crawler";
 import type { Env, SiteConfig, QueueMessage } from "./config";
-import { getAppConfig } from "./config";
+import { getAppConfig, getWorkflowConfig } from "./config";
 
 // ==================== Hono Gateway ====================
 const app = new Hono<{ Bindings: Env }>();
@@ -141,9 +141,11 @@ export default {
         // Idempotency is also achieved via msg.id preventing duplicate processing from Queue retries
         const instanceId = `${msg.body.id}-${msg.id}`;
 
+        const workflowConfig = getWorkflowConfig(env);
         await env.MASTER_WORKFLOW.create({
           id: instanceId, // <--- Using dynamically generated unique ID
           params: msg.body,
+          retention: workflowConfig.RETENTION,
         });
 
         console.log(

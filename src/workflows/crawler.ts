@@ -149,6 +149,7 @@ export class MasterCrawlerWorkflow extends WorkflowEntrypoint<
             batchIndex: i,
             siteConfig,
           } satisfies ChildParams,
+          retention: workflowConfig.RETENTION,
         }));
 
         await this.env.CHILD_WORKFLOW.createBatch(instances);

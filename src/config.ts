@@ -120,6 +120,9 @@ export interface Env {
 
   DETAIL_NOTIFY_RETRIES?: string; // e.g. "3"
   DETAIL_NOTIFY_RETRY_DELAY?: string; // e.g. "5 seconds"
+
+  WORKFLOW_RETENTION_SUCCESS?: string; // e.g. "1 hour"
+  WORKFLOW_RETENTION_ERROR?: string; // e.g. "1 day"
 }
 
 // ==================== Configuration Getters ====================
@@ -159,6 +162,12 @@ export function getAppConfig(env: Env) {
 
 export function getWorkflowConfig(env: Env) {
   return {
+    RETENTION: {
+      successRetention: (env.WORKFLOW_RETENTION_SUCCESS ||
+        "1 hour") as WorkflowSleepDuration,
+      errorRetention: (env.WORKFLOW_RETENTION_ERROR ||
+        "1 day") as WorkflowSleepDuration,
+    },
     MASTER_CRAWLER: {
       BATCH_SIZE: env.MASTER_BATCH_SIZE
         ? parseInt(env.MASTER_BATCH_SIZE, 10)
