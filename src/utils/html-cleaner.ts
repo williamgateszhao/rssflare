@@ -33,7 +33,7 @@ const REMOVE_PATTERNS = [
   /nav/i,
   /menu/i,
   /advertisement/i,
-  /ad-/i,
+  /(?:^|[\s_-])ad-/i,
   /popup/i,
   /modal/i,
 ];

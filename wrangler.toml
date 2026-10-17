@@ -14,6 +14,7 @@ enabled = true
 # USER_AGENT = "Mozilla/5.0 (compatible; RSSFlare Custom Bot/1.0)"
 # FEED_CACHE_MAX_AGE = "600"
 # DEBUG_SAVE_HTML = "false"
+# ARTICLE_RETENTION_DAYS = "30" # Optional cache cleanup; unset or "0" disables it
 # MASTER_BATCH_SIZE = "5"
 # MASTER_FETCH_TIMEOUT = "30 seconds"
 # MASTER_FETCH_RETRIES = "2"
@@ -29,6 +30,8 @@ enabled = true
 # DETAIL_PROCESS_RETRY_DELAY = "10 seconds"
 # DETAIL_NOTIFY_RETRIES = "3"
 # DETAIL_NOTIFY_RETRY_DELAY = "5 seconds"
+# WORKFLOW_RETENTION_SUCCESS = "1 hour"
+# WORKFLOW_RETENTION_ERROR = "1 day"
 # =================================================================
 
 # KV: Store config

@@ -115,6 +115,33 @@ Here are the supported fields for a feed configuration:
 | `parser_config`      | Object         | _Optional._ Any custom configuration parameters you want to pass specifically to your parser script.                                                                                                                                            |
 | `sort_by_list_order` | Boolean        | _Optional._ If `true`, strictly keeps the original list order during RSS generation. Defaults to `false`, which sorts items by their published date (falling back to fetched date if `pubDate` is missing).                                     |
 
+### 🧹 Optional Article Cache Cleanup
+
+Existing deployments can upgrade without changing the D1 schema or indexes. Automatic cleanup is disabled by default. To enable it, add this setting under the existing `[vars]` section in `wrangler.toml`, then deploy:
+
+```toml
+ARTICLE_RETENTION_DAYS = "30"
+```
+
+- After a complete, non-empty feed update is successfully written to R2, keep every article URL in the current feed list and any other articles fetched within the retention period.
+- Delete at most 50 older, unused articles and 50 expired `debug_raw_html` rows per cleanup attempt, scoped to that feed. Debug HTML expires by age even if its article remains current.
+- Age is measured from `fetched_at`, not publication date or the date an article leaves the list. An old article that remains in the current list is retained; if it leaves the list and is later encountered again after deletion, it is fetched again.
+- Failed or empty list fetches, incomplete article batches, and failed R2 writes do not trigger cleanup. Cleanup errors are logged and later runs can try again.
+- Unset the setting or use `"0"` to disable cleanup. Invalid values disable cleanup and produce a warning. RSS XML continues to be regenerated on each successful run.
+
+Inactive feeds are not cleaned automatically. To remove their cache, first remove the feed ID from KV's `site_index` and let any existing workflows for that feed finish. Save the following as `cleanup-feed.sql`, replacing `old-feed` with the intended ID:
+
+```sql
+DELETE FROM articles WHERE feed_id = 'old-feed';
+DELETE FROM debug_raw_html WHERE feed_id = 'old-feed';
+```
+
+```bash
+npx wrangler d1 execute D1 --remote --file=./cleanup-feed.sql
+```
+
+This removes the feed's D1 cache; its generated XML in R2 remains available.
+
 ### 🛠 Developing Custom Parsers
 
 To add support for a new website, create a new TypeScript file in `src/utils/parsers/` and implement the `Parser` interface. Then, run:
@@ -124,6 +151,8 @@ npm run predev # This regenerates src/utils/parsers/index.ts
 ```
 
 _Note: Because RSSFlare is positioned for personal use, this project does not aim to accumulate a massive collection of parsers or unify parser code and configuration structures. If you have the technical capability to deploy this project to Cloudflare, you certainly have the ability to generate the exact custom parsers you need using "vibe coding" (LLMs). Several parsers are provided as examples, and you can easily use AI to convert existing RSSHub routes into parsers for this project._
+
+For local checks, use the Node.js version pinned in `mise.toml`: run `mise install`, `mise exec -- npm ci`, then `mise exec -- npm test`, `mise exec -- npm run typecheck`, and `mise exec -- npm run check-format`. Tests use in-memory bindings and SQLite and do not access a Cloudflare account.
 
 ---
 
@@ -236,6 +265,33 @@ npx wrangler workflows trigger rssflare-master '{"id":"apod", "url":"https://apo
 | `parser_config`      | Object         | _选填。_ 透传给解析器脚本的自定义参数对象。                                                                                                                                                                                     |
 | `sort_by_list_order` | Boolean        | _选填。_ 是否强制按照原始列表页的顺序输出 RSS。默认为 `false`，即按发布时间排序推断（若缺少发布时间，则退化为按抓取时间排序）。                                                                                                 |
 
+### 🧹 可选的文章缓存清理
+
+已有部署升级时无需修改 D1 表结构或索引。自动清理默认关闭；需要启用时，在 `wrangler.toml` 已有的 `[vars]` 中加入以下配置并部署：
+
+```toml
+ARTICLE_RETENTION_DAYS = "30"
+```
+
+- 每次完整、非空的 RSS 成功写入 R2 后，保留本轮列表中的全部文章，以及保留期内抓取的其他文章。
+- 每次清理最多删除该订阅下 50 条过期且不再使用的文章，以及 50 条过期的 `debug_raw_html`。调试 HTML 仅按保存时间过期，即使对应文章仍在当前列表中也可清理。
+- 保留期从 `fetched_at` 计算，不按发布时间或离开列表的时间计算。仍在本轮列表中的老文章不会被删除；已清理文章以后重新出现时会重新抓取。
+- 列表抓取失败或为空、部分文章未取得、R2 写入失败时不清理。清理出错会记录日志，后续运行可继续尝试。
+- 未配置或设为 `"0"` 表示关闭；非法值会关闭清理并输出警告。RSS XML 仍在每轮成功运行时重新生成。
+
+停用的订阅不会自动清理。如需删除其缓存，先从 KV 的 `site_index` 中移除该订阅 ID，等待该订阅已有的工作流结束，再将以下内容保存为 `cleanup-feed.sql`，把 `old-feed` 替换为目标 ID：
+
+```sql
+DELETE FROM articles WHERE feed_id = 'old-feed';
+DELETE FROM debug_raw_html WHERE feed_id = 'old-feed';
+```
+
+```bash
+npx wrangler d1 execute D1 --remote --file=./cleanup-feed.sql
+```
+
+这些命令只删除该订阅的 D1 缓存，R2 中已经生成的 XML 仍然可读取。
+
 ### 🛠 自定义解析器开发
 
 如果需要增加新的网站支持，请在 `src/utils/parsers/` 目录下创建一个新的 TypeScript 文件，并实现 `Parser` 接口。然后运行：
@@ -245,3 +301,5 @@ npm run predev # 该脚本会自动重新生成 src/utils/parsers/index.ts 注�
 ```
 
 _注：正是因为 RSSFlare 定位于个人使用，本项目并不致力于像 RSSHub 那样收录海量的 parser，也不致力于统一 parser 的代码结构和配置方式。对于有能力将本项目部署到 Cloudflare 上的用户，相信您也一定有能力通过 "vibe coding" (利用 AI) 生成自己所需的专属 parser。项目中已提供了数个解析器作为样例，您可以非常方便地利用 AI 将现有的 RSSHub 路由代码转换为适用于本项目的解析器。_
+
+本地检查使用 `mise.toml` 固定的 Node.js 版本：依次运行 `mise install`、`mise exec -- npm ci`，再执行 `mise exec -- npm test`、`mise exec -- npm run typecheck` 和 `mise exec -- npm run check-format`。测试使用内存中的绑定和 SQLite，不访问 Cloudflare 账号。

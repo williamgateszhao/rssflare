@@ -11,13 +11,15 @@
   "scripts": {
     "format": "prettier --write .",
     "check-format": "prettier --check .",
+    "test": "node --import ./tests/register.mjs tests/regressions.test.mjs",
+    "typecheck": "tsc --noEmit",
     "prepare-github": "bash scripts/prepare-github-release.sh",
     "predev": "node scripts/generate-parsers.js",
     "predeploy": "npm run format && node scripts/generate-parsers.js",
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
-    "db:init": "wrangler d1 execute D1_DB --local --file=./schema.sql",
-    "db:init:remote": "wrangler d1 execute D1_DB --remote --file=./schema.sql"
+    "db:init": "wrangler d1 execute D1 --local --file=./schema.sql",
+    "db:init:remote": "wrangler d1 execute D1 --remote --file=./schema.sql"
   },
   "dependencies": {
     "cheerio": "^1.0.0",

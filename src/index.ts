@@ -102,7 +102,7 @@ export default {
           "json"
         )) as Partial<SiteConfig> | null;
         if (config) {
-          return { id, ...config } as SiteConfig;
+          return { ...config, id } as SiteConfig;
         }
         return null;
       })
@@ -111,17 +111,7 @@ export default {
     // Filter out invalid sites and map to Queue messages
     const tasks = sites
       .filter((s): s is SiteConfig => s !== null)
-      .map((s) => ({
-        body: {
-          id: s.id,
-          url: s.url,
-          parser: s.parser,
-          max_items: s.max_items,
-          parser_config: s.parser_config,
-          rss_name: s.rss_name,
-          img_rewrite: s.img_rewrite,
-        } satisfies QueueMessage,
-      }));
+      .map((s) => ({ body: s satisfies QueueMessage }));
 
     if (tasks.length === 0) {
       console.log("No sites to process.");
@@ -151,13 +141,19 @@ export default {
         console.log(
           `Workflow started for: ${msg.body.id}, instance: ${instanceId}`
         );
+        msg.ack();
       } catch (err) {
-        // If the Queue retries delivering the same msg.id due to an anomaly, catching instance.already_exists skips it
-        console.warn(`Workflow skipped/failed for ${msg.body.id}: ${err}`);
+        if (
+          err instanceof Error &&
+          err.message.includes("(instance.already_exists)")
+        ) {
+          console.log(`Workflow already exists for: ${msg.body.id}`);
+          msg.ack();
+        } else {
+          console.warn(`Workflow creation failed for ${msg.body.id}: ${err}`);
+          msg.retry();
+        }
       }
-
-      // Always ack the message if it was successfully dispatched or skipped due to existing workflow instance
-      msg.ack();
     }
   },
 };

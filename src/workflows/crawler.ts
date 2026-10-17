@@ -2,6 +2,7 @@ import {
   WorkflowEntrypoint,
   type WorkflowEvent,
   type WorkflowStep,
+  type WorkflowSleepDuration,
 } from "cloudflare:workers";
 import { Feed } from "feed";
 import dayjs from "dayjs";
@@ -17,6 +18,7 @@ import {
 import { getParser } from "../utils/parsers";
 import { cleanHtml, truncateContent } from "../utils/html-cleaner";
 import { rewriteImagesInHtml } from "../utils/img-rewriter";
+import { cleanupArticleCache } from "../utils/article-cache";
 
 // Helper function: array slice
 function chunkArray<T>(array: T[], size: number): T[][] {
@@ -166,11 +168,11 @@ export class MasterCrawlerWorkflow extends WorkflowEntrypoint<
     }
 
     // ========== Step 5: Generate XML & Upload to R2 ==========
-    await step.do(
+    const savedFeed = await step.do(
       `save-feed-${siteConfig.id}`,
       workflowConfig.MASTER_CRAWLER.SAVE_FEED,
       async () => {
-        if (listResult.allItems.length === 0) return true;
+        if (listResult.allItems.length === 0) return { complete: false };
 
         const allUrls = listResult.allItems.map((item) => item.url);
 
@@ -285,9 +287,11 @@ export class MasterCrawlerWorkflow extends WorkflowEntrypoint<
         // And it doesn't support outputting <dc:creator> natively out of the box.
         // We inject a special AUTHOR_HINT with dummy email, and replace it so we output correct dc:creator tags
         // This fully handles single or multiple authors seamlessly, while retaining the <author> tag if desired.
+        let hasCreators = false;
         xml = xml.replace(
           /<author>dummy@rssflare\.local \(AUTHOR_HINT:(.*?)\)<\/author>/g,
           (match, authorsStr) => {
+            hasCreators = true;
             const authors = authorsStr.split("|");
             const authorTag = `<author>${authors.join(", ")}</author>`;
             const dcCreators = authors
@@ -296,6 +300,12 @@ export class MasterCrawlerWorkflow extends WorkflowEntrypoint<
             return `${authorTag}\n            ${dcCreators}`;
           }
         );
+        if (hasCreators && !/<rss\b[^>]*\bxmlns:dc=/.test(xml)) {
+          xml = xml.replace(
+            "<rss ",
+            '<rss xmlns:dc="http://purl.org/dc/elements/1.1/" '
+          );
+        }
 
         await this.env.R2.put(`feeds/${siteConfig.id}.xml`, xml, {
           httpMetadata: {
@@ -303,9 +313,39 @@ export class MasterCrawlerWorkflow extends WorkflowEntrypoint<
           },
         });
 
-        return true;
+        return { complete: orderedArticles.length === allUrls.length };
       }
     );
+
+    // ========== Step 6: Reclaim old cache after a complete, published update ==========
+    if (appConfig.ARTICLE_RETENTION_DAYS > 0 && savedFeed.complete) {
+      try {
+        await step.do(
+          `cleanup-cache-${siteConfig.id}`,
+          { retries: { limit: 0, delay: "1 second" }, timeout: "30 seconds" },
+          async () => {
+            const cutoff = new Date(
+              event.timestamp.getTime() -
+                appConfig.ARTICLE_RETENTION_DAYS * 86400000
+            )
+              .toISOString()
+              .slice(0, 19)
+              .replace("T", " ");
+            return await cleanupArticleCache(
+              this.env.D1,
+              siteConfig.id,
+              listResult.allItems.map((item) => item.url),
+              cutoff
+            );
+          }
+        );
+      } catch (err) {
+        await step.do(`log-cleanup-failure-${siteConfig.id}`, async () => {
+          console.warn(`Cache cleanup failed for ${siteConfig.id}: ${err}`);
+          return { skipped: true };
+        });
+      }
+    }
 
     return { success: true, processedBatches: totalBatches };
   }

@@ -75,10 +75,11 @@ export const defaultParser: SiteParser = {
       $("title").text().trim();
 
     // Extract body content
-    const contentEl =
-      $("article .post-content, article .entry-content").first() ||
-      $(".post-content, .entry-content, .article-content").first() ||
-      $("article").first();
+    let contentEl = $("article .post-content, article .entry-content").first();
+    if (!contentEl.length) {
+      contentEl = $(".post-content, .entry-content, .article-content").first();
+    }
+    if (!contentEl.length) contentEl = $("article").first();
 
     // Cleanup: remove scripts, styles, navigation and other irrelevant elements
     contentEl

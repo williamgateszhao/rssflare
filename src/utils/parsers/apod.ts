@@ -93,6 +93,14 @@ export const apodParser: SiteParser = {
       }
     });
 
+    // RSS readers may discard embedded players; keep a usable video link instead.
+    mediaP.find("iframe[src]").each((_, el) => {
+      const link = content("<a></a>")
+        .attr("href", content(el).attr("src")!)
+        .text("Watch video");
+      content(el).replaceWith(link);
+    });
+
     const mediaHtml = mediaP.html();
     if (mediaHtml) {
       description += `${mediaHtml} <br>`;

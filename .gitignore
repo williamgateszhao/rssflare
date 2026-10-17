@@ -48,3 +48,8 @@ Thumbs.db
 *.mov
 *.wmv
 
+
+# Cloudflare Workers
+.wrangler/
+.mf/
+.dev.vars

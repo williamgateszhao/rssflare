@@ -19,16 +19,7 @@ export interface SiteConfig {
 }
 
 /** Queue Message Payload */
-export interface QueueMessage {
-  id: string;
-  url: string | string[];
-  parser: string;
-  max_items?: number;
-  parser_config?: any;
-  rss_name?: string;
-  img_rewrite?: string;
-  sort_by_list_order?: boolean;
-}
+export type QueueMessage = SiteConfig;
 
 /** D1 Article Record */
 export interface Article {
@@ -101,6 +92,7 @@ export interface Env {
   FEED_CACHE_MAX_AGE?: string; // e.g. "600"
   DEBUG_SAVE_HTML?: string; // e.g. "true"
   MAX_CONTENT_LENGTH?: string; // e.g. "300000"
+  ARTICLE_RETENTION_DAYS?: string; // Positive integer enables cleanup; unset or "0" disables it
 
   MASTER_BATCH_SIZE?: string; // e.g. "5"
   MASTER_FETCH_TIMEOUT?: string; // e.g. "30 seconds"
@@ -147,6 +139,15 @@ export function getSiteConfig(
 }
 
 export function getAppConfig(env: Env) {
+  const retentionDays = Number(env.ARTICLE_RETENTION_DAYS || "0");
+  const validRetention =
+    Number.isSafeInteger(retentionDays) &&
+    retentionDays >= 0 &&
+    Number.isFinite(new Date(Date.now() - retentionDays * 86400000).getTime());
+  if (!validRetention) {
+    console.warn("Invalid ARTICLE_RETENTION_DAYS; cache cleanup is disabled.");
+  }
+
   return {
     USER_AGENT: env.USER_AGENT || "Mozilla/5.0 (compatible; RSSBot/1.0)",
     FEED_CACHE_MAX_AGE: env.FEED_CACHE_MAX_AGE
@@ -157,6 +158,7 @@ export function getAppConfig(env: Env) {
     MAX_CONTENT_LENGTH: env.MAX_CONTENT_LENGTH
       ? parseInt(env.MAX_CONTENT_LENGTH, 10)
       : 300000,
+    ARTICLE_RETENTION_DAYS: validRetention ? retentionDays : 0,
   };
 }
 
